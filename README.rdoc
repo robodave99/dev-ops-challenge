@@ -19,7 +19,7 @@ You should choose between two pills:
 Please explain the reason for your decision.
 After you take a choice, please complete the following tasks.
 
-1. Create the infrastructure and the pipeline needed in order to serve our application from ECS containers.
+1. Create the infrastructure and the pipeline needed in order to serve our application from AWS/GCP containers.
 2. Host our database in AWS RDS/ GCP SQL and import the current data (/db/database.sql).
 3. Create a script that easy deploy new code to the stack.
 4. Set autoscaling policies in order to have a minimum of 1 task, a desired of 1, and a maximum of 10 based on the CPU usage.
