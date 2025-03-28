@@ -107,7 +107,7 @@ resource "aws_ecs_task_definition" "rails_task" {
         }
       ],
       "environment": [
-        {"name": "DATABASE_HOST", "value": aws_rds_instance.postgres.address},
+        {"name": "DATABASE_HOST", "value": aws_db_instance.postgres.address},
         {"name": "DATABASE_USER", "value": "admin"},
         {"name": "DATABASE_PASSWORD", "value": "admin123"}
       ]
