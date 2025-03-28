@@ -34,6 +34,12 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
+# Create an ECR repository
+resource "aws_ecr_repository" "rails_repo" {
+  name                 = "rails-app-repo"
+  image_tag_mutability = "MUTABLE"
+}
+
 # IAM Role for ECS
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
@@ -90,7 +96,7 @@ resource "aws_ecs_task_definition" "rails_task" {
   container_definitions = jsonencode([
     {
       "name": "rails-container",
-      "image": "YOUR_ECR_IMAGE_URL",
+      "image": aws_ecr_repository.rails_repo.repository_url,
       "memory": 512,
       "cpu": 256,
       "essential": true,
@@ -154,5 +160,10 @@ resource "aws_appautoscaling_policy" "ecs_policy" {
 
 output "ecs_service_url" {
   value = aws_ecs_service.rails_service.id
+}
+
+# Output ECR repository URL and ECS service URL
+output "ecr_repo_url" {
+  value = aws_ecr_repository.rails_repo.repository_url
 }
 
