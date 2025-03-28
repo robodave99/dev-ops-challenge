@@ -158,12 +158,11 @@ resource "aws_appautoscaling_policy" "ecs_policy" {
   }
 }
 
-output "ecs_service_url" {
-  value = aws_ecs_service.rails_service.id
-}
-
 # Output ECR repository URL and ECS service URL
 output "ecr_repo_url" {
   value = aws_ecr_repository.rails_repo.repository_url
 }
 
+output "ecs_service_url" {
+  value = aws_ecs_service.rails_service.id
+}
