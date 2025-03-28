@@ -72,7 +72,7 @@ resource "aws_ecs_cluster" "rails_cluster" {
 }
 
 # RDS Database
-resource "aws_rds_instance" "postgres" {
+resource "aws_db_instance" "postgres" {
   allocated_storage    = 20
   engine              = "postgres"
   engine_version      = "11.6"
