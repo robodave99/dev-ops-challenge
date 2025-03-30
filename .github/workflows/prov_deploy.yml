@@ -8,7 +8,7 @@ on:
       - "main.tf"
       - "Dockerfile"
       - "app/**"
-      - ".github/workflows/prov-deploy.yml"
+      - ".github/workflows/prov_deploy.yml"
 
 jobs:
   terraform:
