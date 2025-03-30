@@ -12,7 +12,7 @@ on:
 
 jobs:
   terraform:
-    name: "Terraform Apply"
+    name: "Infrastructure Provisioning"
     runs-on: ubuntu-latest
 
     steps:
