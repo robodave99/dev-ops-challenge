@@ -77,8 +77,8 @@ resource "aws_db_instance" "postgres" {
   engine              = "postgres"
   engine_version      = "12"
   instance_class      = "db.t3.micro"
-  username           = "admin"
-  password           = "admin123"
+  username           = "dbadmin"
+  password           = "dbadmin123"
   publicly_accessible = false
   vpc_security_group_ids = [aws_security_group.ecs_sg.id]
   skip_final_snapshot   = true
