@@ -27,6 +27,17 @@ resource "aws_subnet" "public_2" {
   availability_zone = "us-east-1b"
 }
 
+# DB Subnet Group
+resource "aws_db_subnet_group" "db_subnet_group" {
+  name       = "my-db-subnet-group"
+  subnet_ids = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+
+  tags = {
+    Name = "DB Subnet Group"
+  }
+}
+
+
 # Security Group
 resource "aws_security_group" "ecs_sg" {
   vpc_id = aws_vpc.main.id
@@ -87,8 +98,10 @@ resource "aws_db_instance" "postgres" {
   db_name            = "mejuridb" 
   publicly_accessible = false
   vpc_security_group_ids = [aws_security_group.ecs_sg.id]
+  db_subnet_group_name = aws_db_subnet_group.db_subnet_group.name
   skip_final_snapshot   = true
 }
+
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "rails_task" {
