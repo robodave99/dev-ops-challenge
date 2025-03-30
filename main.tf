@@ -75,7 +75,7 @@ resource "aws_ecs_cluster" "rails_cluster" {
 resource "aws_db_instance" "postgres" {
   allocated_storage    = 20
   engine              = "postgres"
-  engine_version      = "11.6"
+  engine_version      = "12"
   instance_class      = "db.t3.micro"
   username           = "admin"
   password           = "admin123"
