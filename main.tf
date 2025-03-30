@@ -79,6 +79,7 @@ resource "aws_db_instance" "postgres" {
   instance_class      = "db.t3.micro"
   username           = "dbadmin"
   password           = "dbadmin123"
+  db_name            = "mejuridb" 
   publicly_accessible = false
   vpc_security_group_ids = [aws_security_group.ecs_sg.id]
   skip_final_snapshot   = true
@@ -108,8 +109,9 @@ resource "aws_ecs_task_definition" "rails_task" {
       ],
       "environment": [
         {"name": "DATABASE_HOST", "value": aws_db_instance.postgres.address},
-        {"name": "DATABASE_USER", "value": "admin"},
-        {"name": "DATABASE_PASSWORD", "value": "admin123"}
+        {"name": "DATABASE_USER", "value": "dbadmin"},
+        {"name": "DATABASE_PASSWORD", "value": "dbadmin123"},
+        {"name": "DATABASE_NAME", "value": "mejuridb"}
       ]
     }
   ])
