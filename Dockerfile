@@ -1,14 +1,18 @@
 # Use the official Ruby image
 FROM ruby:2.3
 
+# Set environment variables for better performance
+ENV LANG C.UTF-8
+ENV BUNDLER_VERSION 2.1.4
+
 # Install dependencies for Rails app
-RUN apt-get update -qq && apt-get install -y nodejs postgresql-client
+RUN apt-get update -qq && apt-get install -y nodejs postgresql-client yarn build-essential libpq-dev
 
 # Set the working directory in the container
 WORKDIR /myapp
 
 # Install Bundler
-RUN gem install bundler
+RUN gem install bundler -v "$BUNDLER_VERSION"
 
 # Copy the Gemfile and Gemfile.lock to install dependencies
 COPY Gemfile /myapp/Gemfile
