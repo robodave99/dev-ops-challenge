@@ -1,5 +1,3 @@
-# ECS with ALB - Full Terraform Configuration
-
 provider "aws" {
   region = "us-east-1"
 }
@@ -226,7 +224,7 @@ resource "aws_lb_target_group" "rails_tg" {
   target_type = "ip"
 
   health_check {
-    path                = "/"
+    path                = "/hello_world"
     protocol            = "HTTP"
     matcher             = "200-399"
     interval            = 30
