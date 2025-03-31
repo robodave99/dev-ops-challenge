@@ -1,5 +1,5 @@
 # Use the official Ruby image
-FROM ruby:2.3
+FROM ruby:2.3-slim
 
 # Set environment variables for better performance
 ENV LANG C.UTF-8
