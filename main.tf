@@ -4,27 +4,61 @@ provider "aws" {
 
 # VPC
 resource "aws_vpc" "main" {
-  cidr_block = "10.0.0.0/16"
-  enable_dns_support = true
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_support   = true
   enable_dns_hostnames = true
+
   tags = {
     Name = "mejuri-custom-vpc"
   }
 }
 
+# Internet Gateway
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "main-igw"
+  }
+}
+
 # Public Subnets
 resource "aws_subnet" "public_1" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.1.0/24"
   map_public_ip_on_launch = true
-  availability_zone = "us-east-1a"
+  availability_zone       = "us-east-1a"
 }
 
 resource "aws_subnet" "public_2" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.2.0/24"
   map_public_ip_on_launch = true
-  availability_zone = "us-east-1b"
+  availability_zone       = "us-east-1b"
+}
+
+# Public Route Table
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "public-route-table"
+  }
+}
+
+resource "aws_route_table_association" "public_1" {
+  subnet_id      = aws_subnet.public_1.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "public_2" {
+  subnet_id      = aws_subnet.public_2.id
+  route_table_id = aws_route_table.public.id
 }
 
 # DB Subnet Group
@@ -37,7 +71,6 @@ resource "aws_db_subnet_group" "db_subnet_group" {
   }
 }
 
-
 # Security Group
 resource "aws_security_group" "ecs_sg" {
   vpc_id = aws_vpc.main.id
@@ -48,15 +81,23 @@ resource "aws_security_group" "ecs_sg" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-# Create an ECR repository
+# ECR Repository
 resource "aws_ecr_repository" "rails_repo" {
   name                 = "rails-app-repo"
   image_tag_mutability = "MUTABLE"
 }
 
-# IAM Role for ECS
+# IAM Role for ECS Execution
+
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
 
@@ -89,23 +130,23 @@ resource "aws_ecs_cluster" "rails_cluster" {
 
 # RDS Database
 resource "aws_db_instance" "postgres" {
-  allocated_storage    = 20
-  engine              = "postgres"
-  engine_version      = "12"
-  instance_class      = "db.t3.micro"
-  username           = "dbadmin"
-  password           = "dbadmin123"
-  db_name            = "mejuridb" 
-  publicly_accessible = false
+  allocated_storage      = 20
+  engine                 = "postgres"
+  engine_version         = "12"
+  instance_class         = "db.t3.micro"
+  username               = "dbadmin"
+  password               = "dbadmin123"
+  db_name                = "mejuridb"
+  publicly_accessible    = false
   vpc_security_group_ids = [aws_security_group.ecs_sg.id]
-  db_subnet_group_name = aws_db_subnet_group.db_subnet_group.name
-  skip_final_snapshot   = true
+  db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
+  skip_final_snapshot    = true
 }
 
-# CloudWatch Log Group for ECS
+# CloudWatch Logs
 resource "aws_cloudwatch_log_group" "ecs_log_group" {
   name              = "/ecs/rails-app-logs"
-  retention_in_days = 7 
+  retention_in_days = 7
 }
 
 # ECS Task Definition
@@ -119,50 +160,33 @@ resource "aws_ecs_task_definition" "rails_task" {
 
   container_definitions = jsonencode([
     {
-      "name": "rails-container",
-      "image": aws_ecr_repository.rails_repo.repository_url,
-      "memory": 512,
-      "cpu": 256,
-      "essential": true,
-      "portMappings": [
+      name      = "rails-container",
+      image     = aws_ecr_repository.rails_repo.repository_url,
+      memory    = 512,
+      cpu       = 256,
+      essential = true,
+      portMappings = [
         {
-          "containerPort": 80,
-          "hostPort": 80
+          containerPort = 80,
+          hostPort      = 80
         }
       ],
-      "environment": [
-        {"name": "DATABASE_HOST", "value": aws_db_instance.postgres.address},
-        {"name": "DATABASE_USER", "value": "dbadmin"},
-        {"name": "DATABASE_PASSWORD", "value": "dbadmin123"},
-        {"name": "DATABASE_NAME", "value": "mejuridb"}
+      environment = [
+        { name = "DATABASE_HOST",     value = aws_db_instance.postgres.address },
+        { name = "DATABASE_USER",     value = "dbadmin" },
+        { name = "DATABASE_PASSWORD", value = "dbadmin123" },
+        { name = "DATABASE_NAME",     value = "mejuridb" }
       ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": aws_cloudwatch_log_group.ecs_log_group.name,
-          "awslogs-region": "us-east-1",
-          "awslogs-stream-prefix": "rails"
+      logConfiguration = {
+        logDriver = "awslogs",
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.ecs_log_group.name,
+          awslogs-region        = "us-east-1",
+          awslogs-stream-prefix = "rails"
         }
       }
     }
   ])
-}
-
-# CloudWatch Alarm for ECS Service CPU Utilization
-resource "aws_cloudwatch_metric_alarm" "ecs_cpu_alarm" {
-  alarm_name                = "rails-ecs-cpu-alarm"
-  comparison_operator       = "GreaterThanThreshold"
-  evaluation_periods        = "1"
-  metric_name               = "CPUUtilization"
-  namespace                 = "AWS/ECS"
-  period                    = "60"
-  statistic                 = "Average"
-  threshold                 = "80"  # Trigger alarm when CPU > 80%
-  alarm_description         = "Triggered when ECS CPU Utilization is high"
-  dimensions = {
-    ClusterName = aws_ecs_cluster.rails_cluster.name
-    ServiceName = aws_ecs_service.rails_service.name
-  }
 }
 
 # ECS Service
@@ -174,8 +198,8 @@ resource "aws_ecs_service" "rails_service" {
   desired_count   = 1
 
   network_configuration {
-    subnets          = [aws_subnet.public_1.id, aws_subnet.public_2.id]
-    security_groups  = [aws_security_group.ecs_sg.id]
+    subnets         = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+    security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 }
@@ -208,7 +232,7 @@ resource "aws_appautoscaling_policy" "ecs_policy" {
   }
 }
 
-# Output ECR repository URL and ECS service URL
+# Outputs
 output "ecr_repo_url" {
   value = aws_ecr_repository.rails_repo.repository_url
 }
@@ -216,4 +240,3 @@ output "ecr_repo_url" {
 output "ecs_service_url" {
   value = aws_ecs_service.rails_service.id
 }
-
