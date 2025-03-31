@@ -87,8 +87,8 @@ resource "aws_security_group" "ecs_sg" {
   vpc_id = aws_vpc.main.id
 
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 3000
+    to_port     = 3000
     protocol    = "tcp"
     security_groups = [aws_security_group.alb_sg.id]
   }
@@ -184,8 +184,8 @@ resource "aws_ecs_task_definition" "rails_task" {
       essential = true,
       portMappings = [
         {
-          containerPort = 80,
-          hostPort      = 80
+          containerPort = 3000,
+          hostPort      = 3000
         }
       ],
       environment = [
@@ -218,7 +218,7 @@ resource "aws_lb" "app_alb" {
 
 resource "aws_lb_target_group" "rails_tg" {
   name        = "rails-target-group"
-  port        = 80
+  port        = 3000
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
