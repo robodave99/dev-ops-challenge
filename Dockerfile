@@ -5,13 +5,17 @@ FROM ruby:2.3-slim
 ENV LANG C.UTF-8
 ENV BUNDLER_VERSION 2.1.4
 
-# Install dependencies for Rails app
-#RUN apt-get update -qq 
-RUN apt-get install -y nodejs 
-RUN apt-get -y postgresql-client 
-RUN apt-get -y yarn 
-RUN apt-get -y build-essential 
-RUN apt-get -y libpq-dev
+# Fix broken Debian apt sources for legacy images
+RUN sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
+sed -i '/security.debian.org/d' /etc/apt/sources.list && \
+apt-get update -qq && \
+apt-get install -y --no-install-recommends \
+nodejs \
+postgresql-client \
+yarn \
+build-essential \
+libpq-dev && \
+rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
 WORKDIR /myapp
