@@ -5,10 +5,5 @@ class ApplicationController < ActionController::Base
 
   def hello_world
     message = Message.last
-    if message
-      render json: message, status: :ok
-    else
-      render json: { status: "ok" }, status: :ok
-    end
   end
 end
