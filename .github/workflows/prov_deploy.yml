@@ -57,10 +57,17 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
+        with:
+            mask-password: true
+        
+
+      - name: Get ECR Repository URL
+        run: |
+          ECR_REPO=$(aws ecr describe-repositories --query "repositories[?repositoryName=='rails-app-repo'].repositoryUri" --output text)
+          echo "ECR_REPO=$ECR_REPO" >> $GITHUB_ENV
 
       - name: Build and Push Docker Image
         run: |
-          ECR_REPO="YOUR_ECR_REPOSITORY_URL"
           IMAGE_TAG=$(git rev-parse --short HEAD)
           docker build -t $ECR_REPO:$IMAGE_TAG .
           docker push $ECR_REPO:$IMAGE_TAG

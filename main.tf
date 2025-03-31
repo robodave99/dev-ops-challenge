@@ -50,6 +50,17 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
+# Dynamodb table
+resource "aws_dynamodb_table" "terraform_lock" {
+  name           = "mejuri-state-lock"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "LockID"
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}
+
 # Create an ECR repository
 resource "aws_ecr_repository" "rails_repo" {
   name                 = "rails-app-repo"
@@ -102,6 +113,11 @@ resource "aws_db_instance" "postgres" {
   skip_final_snapshot   = true
 }
 
+# CloudWatch Log Group for ECS
+resource "aws_cloudwatch_log_group" "ecs_log_group" {
+  name              = "/ecs/rails-app-logs"
+  retention_in_days = 7 
+}
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "rails_task" {
@@ -130,9 +146,34 @@ resource "aws_ecs_task_definition" "rails_task" {
         {"name": "DATABASE_USER", "value": "dbadmin"},
         {"name": "DATABASE_PASSWORD", "value": "dbadmin123"},
         {"name": "DATABASE_NAME", "value": "mejuridb"}
-      ]
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": aws_cloudwatch_log_group.ecs_log_group.name,
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "rails"
+        }
+      }
     }
   ])
+}
+
+# CloudWatch Alarm for ECS Service CPU Utilization
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu_alarm" {
+  alarm_name                = "rails-ecs-cpu-alarm"
+  comparison_operator       = "GreaterThanThreshold"
+  evaluation_periods        = "1"
+  metric_name               = "CPUUtilization"
+  namespace                 = "AWS/ECS"
+  period                    = "60"
+  statistic                 = "Average"
+  threshold                 = "80"  # Trigger alarm when CPU > 80%
+  alarm_description         = "Triggered when ECS CPU Utilization is high"
+  dimensions = {
+    ClusterName = aws_ecs_cluster.rails_cluster.name
+    ServiceName = aws_ecs_service.rails_service.name
+  }
 }
 
 # ECS Service
@@ -186,3 +227,4 @@ output "ecr_repo_url" {
 output "ecs_service_url" {
   value = aws_ecs_service.rails_service.id
 }
+
