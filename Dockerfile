@@ -6,7 +6,7 @@ ENV LANG C.UTF-8
 ENV BUNDLER_VERSION 2.1.4
 
 # Install dependencies for Rails app
-RUN apt-get update -qq 
+#RUN apt-get update -qq 
 RUN apt-get install -y nodejs 
 RUN apt-get -y postgresql-client 
 RUN apt-get -y yarn 
