@@ -263,7 +263,7 @@ resource "aws_ecs_service" "rails_service" {
   load_balancer {
     target_group_arn = aws_lb_target_group.rails_tg.arn
     container_name   = "rails-container"
-    container_port   = 80
+    container_port   = 3000
   }
 
   depends_on = [aws_lb_listener.http]
