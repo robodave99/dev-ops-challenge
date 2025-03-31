@@ -4,6 +4,11 @@ class ApplicationController < ActionController::Base
   protect_from_forgery with: :exception
 
   def hello_world
-  	render json: Message.last
+    message = Message.last
+    if message
+      render json: message, status: :ok
+    else
+      render json: { status: "ok" }, status: :ok
+    end
   end
 end
