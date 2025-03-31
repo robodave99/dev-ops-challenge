@@ -42,9 +42,6 @@ RUN rbenv install $RUBY_VERSION && \
 # Install Bundler
 RUN gem install bundler -v "$BUNDLER_VERSION"
 
-# Install Rails
-RUN gem install rails -v "4.2.10"
-
 # Set working directory
 WORKDIR /myapp
 
