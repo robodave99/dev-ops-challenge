@@ -53,7 +53,6 @@ Rails.application.routes.draw do
   #     # (app/controllers/admin/products_controller.rb)
   #     resources :products
   #   end
-  get "/health", to: proc { [200, {}, ["OK"]] }
-  
+
   get 'hello_world' => 'application#hello_world'
 end

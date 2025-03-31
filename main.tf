@@ -108,7 +108,7 @@ resource "aws_security_group" "db_sg" {
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
-    security_groups = [aws_security_group.ecs_sg.id]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -142,7 +142,7 @@ resource "aws_db_instance" "postgres" {
   username               = "dbadmin"
   password               = "dbadmin123"
   db_name                = "mejuridb"
-  publicly_accessible    = false
+  publicly_accessible    = true
   vpc_security_group_ids = [aws_security_group.db_sg.id]
   db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
   skip_final_snapshot    = true
@@ -246,7 +246,7 @@ resource "aws_lb_target_group" "rails_tg" {
   target_type = "ip"
 
   health_check {
-    path                = "/health"
+    path                = "/hello_world"
     protocol            = "HTTP"
     matcher             = "200"
     interval            = 30
