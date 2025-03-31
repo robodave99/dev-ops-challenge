@@ -35,12 +35,16 @@ RUN git clone https://github.com/rbenv/rbenv.git $RBENV_ROOT && \
     git clone https://github.com/rbenv/ruby-build.git $RBENV_ROOT/plugins/ruby-build && \
     $RBENV_ROOT/plugins/ruby-build/install.sh
 
-# Install Ruby 2.3
+# Install Ruby
 RUN rbenv install $RUBY_VERSION && \
     rbenv global $RUBY_VERSION
 
 # Install Bundler
 RUN gem install bundler -v "$BUNDLER_VERSION"
+
+# Install Rails
+RUN gem install rails -v "your_rails_version_here" && \
+    rbenv rehash
 
 # Set working directory
 WORKDIR /myapp
@@ -55,4 +59,4 @@ COPY . /myapp
 
 EXPOSE 80
 
-CMD ["rails", "server", "-b", "0.0.0.0"]
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
