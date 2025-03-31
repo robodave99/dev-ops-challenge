@@ -1,8 +1,11 @@
+# ECS with ALB - Full Terraform Configuration
+
 provider "aws" {
   region = "us-east-1"
 }
 
-# VPC
+# --- NETWORK SETUP ---
+
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -13,7 +16,6 @@ resource "aws_vpc" "main" {
   }
 }
 
-# Internet Gateway
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
@@ -22,7 +24,6 @@ resource "aws_internet_gateway" "igw" {
   }
 }
 
-# Public Subnets
 resource "aws_subnet" "public_1" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = "10.0.1.0/24"
@@ -37,7 +38,6 @@ resource "aws_subnet" "public_2" {
   availability_zone       = "us-east-1b"
 }
 
-# Public Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -61,18 +61,9 @@ resource "aws_route_table_association" "public_2" {
   route_table_id = aws_route_table.public.id
 }
 
-# DB Subnet Group
-resource "aws_db_subnet_group" "db_subnet_group" {
-  name       = "my-db-subnet-group"
-  subnet_ids = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+# --- SECURITY GROUPS ---
 
-  tags = {
-    Name = "DB Subnet Group"
-  }
-}
-
-# Security Group
-resource "aws_security_group" "ecs_sg" {
+resource "aws_security_group" "alb_sg" {
   vpc_id = aws_vpc.main.id
 
   ingress {
@@ -88,15 +79,61 @@ resource "aws_security_group" "ecs_sg" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = {
+    Name = "alb-sg"
+  }
 }
 
-# ECR Repository
+resource "aws_security_group" "ecs_sg" {
+  vpc_id = aws_vpc.main.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# --- DATABASE ---
+
+resource "aws_db_subnet_group" "db_subnet_group" {
+  name       = "my-db-subnet-group"
+  subnet_ids = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+
+  tags = {
+    Name = "DB Subnet Group"
+  }
+}
+
+resource "aws_db_instance" "postgres" {
+  allocated_storage      = 20
+  engine                 = "postgres"
+  engine_version         = "12"
+  instance_class         = "db.t3.micro"
+  username               = "dbadmin"
+  password               = "dbadmin123"
+  db_name                = "mejuridb"
+  publicly_accessible    = false
+  vpc_security_group_ids = [aws_security_group.ecs_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
+  skip_final_snapshot    = true
+}
+
+# --- ECS / IAM / ECR ---
+
 resource "aws_ecr_repository" "rails_repo" {
   name                 = "rails-app-repo"
   image_tag_mutability = "MUTABLE"
 }
-
-# IAM Role for ECS Execution
 
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecsTaskExecutionRole"
@@ -123,33 +160,15 @@ resource "aws_iam_policy_attachment" "ecs_task_execution_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# ECS Cluster
-resource "aws_ecs_cluster" "rails_cluster" {
-  name = "rails-cluster"
-}
-
-# RDS Database
-resource "aws_db_instance" "postgres" {
-  allocated_storage      = 20
-  engine                 = "postgres"
-  engine_version         = "12"
-  instance_class         = "db.t3.micro"
-  username               = "dbadmin"
-  password               = "dbadmin123"
-  db_name                = "mejuridb"
-  publicly_accessible    = false
-  vpc_security_group_ids = [aws_security_group.ecs_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
-  skip_final_snapshot    = true
-}
-
-# CloudWatch Logs
 resource "aws_cloudwatch_log_group" "ecs_log_group" {
   name              = "/ecs/rails-app-logs"
   retention_in_days = 7
 }
 
-# ECS Task Definition
+resource "aws_ecs_cluster" "rails_cluster" {
+  name = "rails-cluster"
+}
+
 resource "aws_ecs_task_definition" "rails_task" {
   family                   = "rails-task"
   network_mode             = "awsvpc"
@@ -189,7 +208,47 @@ resource "aws_ecs_task_definition" "rails_task" {
   ])
 }
 
-# ECS Service
+# --- LOAD BALANCER ---
+
+resource "aws_lb" "app_alb" {
+  name               = "rails-app-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+}
+
+resource "aws_lb_target_group" "rails_tg" {
+  name        = "rails-target-group"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    path                = "/"
+    protocol            = "HTTP"
+    matcher             = "200-399"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+  }
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.app_alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.rails_tg.arn
+  }
+}
+
+# --- ECS SERVICE WITH ALB ---
+
 resource "aws_ecs_service" "rails_service" {
   name            = "rails-service"
   cluster         = aws_ecs_cluster.rails_cluster.id
@@ -202,9 +261,18 @@ resource "aws_ecs_service" "rails_service" {
     security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.rails_tg.arn
+    container_name   = "rails-container"
+    container_port   = 80
+  }
+
+  depends_on = [aws_lb_listener.http]
 }
 
-# Autoscaling
+# --- AUTOSCALING ---
+
 resource "aws_appautoscaling_target" "ecs_target" {
   max_capacity       = 10
   min_capacity       = 1
@@ -232,11 +300,16 @@ resource "aws_appautoscaling_policy" "ecs_policy" {
   }
 }
 
-# Outputs
+# --- OUTPUTS ---
+
 output "ecr_repo_url" {
   value = aws_ecr_repository.rails_repo.repository_url
 }
 
 output "ecs_service_url" {
   value = aws_ecs_service.rails_service.id
+}
+
+output "alb_dns_name" {
+  value = aws_lb.app_alb.dns_name
 }
