@@ -43,7 +43,7 @@ RUN rbenv install $RUBY_VERSION && \
 RUN gem install bundler -v "$BUNDLER_VERSION"
 
 # Install Rails
-RUN gem install rails -v "your_rails_version_here" && \
+RUN gem install rails -v "4.2.11.3" && \
     rbenv rehash
 
 # Set working directory
