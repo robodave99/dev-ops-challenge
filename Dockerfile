@@ -1,35 +1,31 @@
-FROM ruby:3.0-bullseye
+FROM debian:stretch
 
-# If you want to keep the same Bundler version as your old container:
-ENV BUNDLER_VERSION=2.1.4
+# install compile deps
+RUN apt-get update && apt-get install -y \
+  build-essential autoconf bison libssl-dev libyaml-dev libreadline-dev \
+  libncurses5-dev libffi-dev libgdbm-dev libpq-dev nodejs yarn postgresql-client
+
 ENV LANG=C.UTF-8
+ENV RBENV_ROOT=/usr/local/rbenv
+ENV RUBY_VERSION=2.3.8
+ENV PATH="$RBENV_ROOT/bin:$RBENV_ROOT/shims:$PATH"
 
-# Install system dependencies
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends \
-      build-essential \
-      libpq-dev \
-      nodejs \
-      yarn \
-      postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Install rbenv
+RUN git clone https://github.com/rbenv/rbenv.git $RBENV_ROOT && \
+    git clone https://github.com/rbenv/ruby-build.git $RBENV_ROOT/plugins/ruby-build && \
+    cd $RBENV_ROOT && src/configure && make -C src
 
-# Install the specific Bundler version (if desired)
-RUN gem install bundler:"$BUNDLER_VERSION"
+# Install Ruby 2.3.8
+RUN rbenv install $RUBY_VERSION && \
+    rbenv global $RUBY_VERSION && \
+    gem install bundler -v 2.1.4
 
-# Create and use a working directory
 WORKDIR /myapp
 
-# Copy Gemfile files first, for efficient caching
 COPY Gemfile Gemfile.lock ./
-
-# Install gems
 RUN bundle install
 
-# Now copy the rest of your app code
 COPY . /myapp
 
 EXPOSE 3000
-
-# Default command to run your Rails server
 CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
