@@ -1,6 +1,6 @@
 FROM debian:bullseye
 
-# Install all necessary packages
+# Install all necessary packages, including a downloader like curl
 RUN apt-get update && apt-get install -y \
   git \
   build-essential \
@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y \
   libpq-dev \
   nodejs \
   yarn \
-  postgresql-client
+  postgresql-client \
+  curl
 
 ENV LANG=C.UTF-8
 ENV RBENV_ROOT=/usr/local/rbenv
