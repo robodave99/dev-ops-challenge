@@ -29,7 +29,13 @@ jobs:
         run: terraform init
 
       - name: Terraform Plan
+        env:
+          TF_LOG: DEBUG
+          TF_VAR_database_user: ${{ secrets.DATABASE_USER }}
+          TF_VAR_database_password: ${{ secrets.DATABASE_PASSWORD }}
+          TF_VAR_database_name: ${{ secrets.DATABASE_NAME }}
         run: terraform plan -out=tfplan
+      
 
       - name: Terraform Apply
         run: terraform apply tfplan
