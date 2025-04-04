@@ -28,6 +28,10 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Force Unlock Terraform State (if needed)
+        run: terraform force-unlock cc9ef6b7-bba7-ad09-e56b-51516e23bcaa || true
+      
+
       - name: Terraform Plan
         env:
           TF_LOG: DEBUG
