@@ -1,0 +1,86 @@
+name: "Infrastructure Provisioning and App Deployment"
+
+on:
+  push:
+    branches:
+      - main
+      
+
+jobs:
+  terraform:
+    name: "Infrastructure Provisioning"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Force Unlock Terraform State (if needed)
+        run: echo "yes" terraform force-unlock cc9ef6b7-bba7-ad09-e56b-51516e23bcaa || true
+      
+
+      - name: Terraform Plan
+        env:
+          TF_LOG: DEBUG
+          TF_VAR_database_user: ${{ secrets.DATABASE_USER }} # pulling secrets from Github
+          TF_VAR_database_password: ${{ secrets.DATABASE_PASSWORD }}
+          TF_VAR_database_name: ${{ secrets.DATABASE_NAME }}
+        run: terraform plan -out=tfplan
+      
+
+      - name: Terraform Apply
+        run: terraform apply tfplan
+
+  deploy:
+    name: "Deploy to ECS"
+    runs-on: ubuntu-latest
+    needs: terraform  # This ensures 'deploy' runs only after 'terraform' job succeeds
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+            mask-password: true
+        
+
+      - name: Get ECR Repository URL
+        run: |
+          ECR_REPO=$(aws ecr describe-repositories --query "repositories[?repositoryName=='rails-app-repo'].repositoryUri" --output text)
+          echo "ECR_REPO=$ECR_REPO" >> $GITHUB_ENV
+
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG=latest
+          docker build -t $ECR_REPO:$IMAGE_TAG .
+          docker push $ECR_REPO:$IMAGE_TAG
+          echo "IMAGE_URI=$ECR_REPO:$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Update ECS Service
+        run: |
+          aws ecs update-service --cluster rails-cluster \
+            --service rails-service \
+            --force-new-deployment

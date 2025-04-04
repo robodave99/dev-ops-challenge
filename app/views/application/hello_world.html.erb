@@ -1,0 +1,9 @@
+<h1>Hello, World!</h1>
+
+<% if @message.present? %>
+  <h2>Latest Message</h2>
+  <p><strong>ID:</strong> <%= @message.id %></p>
+  <p><strong>Text:</strong> <%= @message.text %></p>
+<% else %>
+  <p>No messages found.</p>
+<% end %>

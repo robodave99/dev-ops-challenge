@@ -18,6 +18,8 @@ SET row_security = off;
 -- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
 --
 
+
+
 CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 
 
@@ -87,9 +89,8 @@ ALTER TABLE ONLY public.messages ALTER COLUMN id SET DEFAULT nextval('public.mes
 -- Data for Name: messages; Type: TABLE DATA; Schema: public; Owner: admin
 --
 
-COPY public.messages (id, text) FROM stdin;
-1	Hello World!
-\.
+INSERT INTO public.messages (id, text) VALUES
+    (1, 'Hello World!');
 
 
 --
@@ -103,18 +104,17 @@ SELECT pg_catalog.setval('public.messages_id_seq', 1, true);
 -- Data for Name: schema_migrations; Type: TABLE DATA; Schema: public; Owner: admin
 --
 
-COPY public.schema_migrations (version) FROM stdin;
-20190916225816
-\.
+INSERT INTO public.schema_migrations (version) 
+VALUES ('20190916225816');
 
 
 --
 -- Name: messages_pkey; Type: CONSTRAINT; Schema: public; Owner: admin
 --
 
-ALTER TABLE ONLY public.messages
+/* ALTER TABLE ONLY public.messages
     ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
-
+*/
 
 --
 -- Name: unique_schema_migrations; Type: INDEX; Schema: public; Owner: admin
@@ -128,8 +128,8 @@ CREATE UNIQUE INDEX unique_schema_migrations ON public.schema_migrations USING b
 --
 
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-REVOKE ALL ON SCHEMA public FROM postgres;
-GRANT ALL ON SCHEMA public TO postgres;
+REVOKE ALL ON SCHEMA public FROM admin;
+GRANT ALL ON SCHEMA public TO admin;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
 

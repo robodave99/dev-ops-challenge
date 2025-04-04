@@ -1,25 +1,25 @@
-# Use the official Ruby image
-FROM ruby:2.3
+FROM ruby:2.3.8
 
-# Install dependencies for Rails app
-RUN apt-get update -qq && apt-get install -y nodejs postgresql-client
+# Replace default Stretch sources with the archived repositories
+RUN rm /etc/apt/sources.list && \
+    echo "deb http://archive.debian.org/debian/ stretch main contrib non-free" >> /etc/apt/sources.list && \
+    echo "deb http://archive.debian.org/debian-security/ stretch/updates main contrib non-free" >> /etc/apt/sources.list && \
+    # Stop APT from complaining about expired Release files
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
 
-# Set the working directory in the container
-WORKDIR /myapp
+# Now install dependencies
+RUN apt-get update -qq && \
+    apt-get install -y build-essential libpq-dev nodejs
 
-# Install Bundler
-RUN gem install bundler
+WORKDIR /app
 
-# Copy the Gemfile and Gemfile.lock to install dependencies
-COPY Gemfile /myapp/Gemfile
-COPY Gemfile.lock /myapp/Gemfile.lock
+# Copy Gemfiles first for caching
+COPY Gemfile Gemfile.lock /app/
 RUN bundle install
 
-# Copy the entire app to the working directory
-COPY . /myapp
+# Copy the rest of the code
+COPY . /app
 
-# Expose port 80 for the app
-EXPOSE 80
+EXPOSE 3000
 
-# Run the Rails server
-CMD ["rails", "server", "-b", "0.0.0.0"]
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "3000"]
