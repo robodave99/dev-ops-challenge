@@ -2,26 +2,19 @@ default: &default
   adapter: postgresql
   encoding: unicode
   pool: 5
-  host: YOUR_DATABASE_HOST
-  username: admin
-  password: admin
+  host: <%= ENV['DATABASE_HOST'] %>
+  username: <%= ENV['DATABASE_USER'] %>
+  password: <%= ENV['DATABASE_PASSWORD'] %>
+  database: <%= ENV['DATABASE_NAME'] %>
 
 development:
   <<: *default
-  database: hello_world
+  database: <%= ENV['DATABASE_NAME'] %>
 
 staging:
   <<: *default
-  database: hello_world
+  database: <%= ENV['DATABASE_NAME'] %>
 
 production:
   <<: *default
-  database: hello_world
-  
-# Warning: The database defined as "test" will be erased and
-# re-generated from your development database when you run "rake".
-# Do not set this db to the same as development or production.
-test:
-  <<: *default
-  adapter: postgresql
-  database: hello_world
+  database: <%= ENV['DATABASE_NAME'] %>
