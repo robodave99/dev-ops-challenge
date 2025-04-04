@@ -9,12 +9,12 @@ default: &default
 
 development:
   <<: *default
-  database: <%= ENV['DATABASE_NAME'] %>_development
+  database: <%= ENV['DATABASE_NAME'] %>
 
 staging:
   <<: *default
-  database: <%= ENV['DATABASE_NAME'] %>_staging
+  database: <%= ENV['DATABASE_NAME'] %>
 
 production:
   <<: *default
-  database: <%= ENV['DATABASE_NAME'] %>_production
+  database: <%= ENV['DATABASE_NAME'] %>

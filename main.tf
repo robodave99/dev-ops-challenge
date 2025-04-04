@@ -139,9 +139,9 @@ resource "aws_db_instance" "postgres" {
   engine                 = "postgres"
   engine_version         = "12"
   instance_class         = "db.t3.micro"
-  username               = "dbadmin"
-  password               = "dbadmin123"
-  db_name                = "mejuridb"
+  username               = var.database_user
+  password               = var.database_password
+  db_name                = var.database_name
   publicly_accessible    = true
   vpc_security_group_ids = [aws_security_group.db_sg.id]
   db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
@@ -212,9 +212,9 @@ resource "aws_ecs_task_definition" "rails_task" {
       ],
       environment = [
         { name = "DATABASE_HOST",     value = aws_db_instance.postgres.address },
-        { name = "DATABASE_USER",     value = "dbadmin" },
-        { name = "DATABASE_PASSWORD", value = "dbadmin123" },
-        { name = "DATABASE_NAME",     value = "mejuridb" }
+        { name = "DATABASE_USER",     value = var.database_user },
+        { name = "DATABASE_PASSWORD", value = var.database_password },
+        { name = "DATABASE_NAME",     value = var.database_name }
       ],
       logConfiguration = {
         logDriver = "awslogs",
