@@ -32,7 +32,7 @@ jobs:
         run: terraform plan -out=tfplan
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply tfplan
 
   deploy:
     name: "Deploy to ECS"
